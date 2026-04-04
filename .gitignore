@@ -1,0 +1,11 @@
+node_modules/
+__pycache__/
+*.pyc
+.env
+.venv/
+.vs/
+.vscode/
+
+# Ignore the nested mobile app repository
+Mobile/
+Guardian-android-app/
