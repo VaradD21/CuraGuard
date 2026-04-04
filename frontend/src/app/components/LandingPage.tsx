@@ -87,7 +87,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
       <div className="bg-gray-50 py-20">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-14">
-            <h2 className="text-3xl font-bold text-gray-900 mb-3">How SafeNet AI Protects Your Family</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-3">How CuraGuard Protects Your Family</h2>
             <p className="text-gray-500 max-w-xl mx-auto">Comprehensive protection powered by cutting-edge AI technology</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -116,7 +116,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
           <div className="relative">
             <h2 className="text-3xl font-bold mb-4">Our Technology</h2>
             <p className="text-blue-100 text-lg mb-8 max-w-2xl leading-relaxed">
-              SafeNet AI uses state-of-the-art NLP and machine learning trained on millions of data points to recognize cyberbullying, grooming, and harmful content — while maintaining full privacy.
+              CuraGuard uses state-of-the-art NLP and machine learning trained on millions of data points to recognize cyberbullying, grooming, and harmful content — while maintaining full privacy.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {['Machine Learning Risk Assessment', 'Sentiment & Behavioral Analysis', 'Privacy-Focused Monitoring', 'Multi-Platform Integration'].map(item => (
@@ -133,7 +133,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
       {/* CTA */}
       <div className="bg-gray-50 py-16 text-center">
         <h2 className="text-3xl font-bold text-gray-900 mb-4">Ready to protect your child?</h2>
-        <p className="text-gray-500 mb-8">Join thousands of parents who trust SafeNet AI</p>
+        <p className="text-gray-500 mb-8">Join thousands of parents who trust CuraGuard</p>
         <button
           onClick={() => onNavigate('registration')}
           className="inline-flex items-center gap-2 bg-[#2563eb] text-white px-8 py-4 rounded-xl hover:bg-[#1d4ed8] transition-all font-semibold text-lg shadow-lg shadow-blue-200 hover:-translate-y-0.5"

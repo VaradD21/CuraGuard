@@ -19,7 +19,7 @@ export function Navbar({ onNavigate, currentPage, isAuthenticated, onLogout }: N
           <div className="bg-[#2563eb] p-1.5 rounded-lg group-hover:bg-[#1d4ed8] transition-colors">
             <Shield className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xl font-bold text-gray-900">SafeNet <span className="text-[#2563eb]">AI</span></span>
+          <span className="text-xl font-bold text-gray-900">Cura<span className="text-[#2563eb]">Guard</span></span>
         </div>
 
         <div className="flex items-center gap-3">

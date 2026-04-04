@@ -49,7 +49,7 @@ export function RegistrationPage({ onNavigate, onRegister }: RegistrationPagePro
               <Shield className="w-8 h-8 text-white" />
             </div>
             <h2 className="text-2xl font-bold text-white">Create Your Account</h2>
-            <p className="text-blue-100 text-sm mt-1">Join SafeNet AI and protect your child today</p>
+            <p className="text-blue-100 text-sm mt-1">Join CuraGuard and protect your child today</p>
           </div>
 
           <div className="p-8">

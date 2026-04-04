@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, Smartphone, Monitor, Download, User } from 'lucide-react';
+import { Users, Smartphone, Monitor, Download, User, CheckCircle } from 'lucide-react';
 
 import { useEffect } from 'react';
 import { apiCall } from '../api';
@@ -7,6 +7,11 @@ import { apiCall } from '../api';
 interface ChildInfo {
   id?: string;
   name: string;
+  age?: string;
+  email?: string;
+  mobile_number?: string;
+  student_id?: string;
+  grade?: string;
   access_code?: string;
   is_activated?: boolean;
 }
@@ -18,6 +23,7 @@ interface PortalPageProps {
 export function PortalPage({ onNavigate }: PortalPageProps) {
   const [showForm, setShowForm] = useState(false);
   const [children, setChildren] = useState<ChildInfo[]>([]);
+  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
 
   useEffect(() => {
     const parentToken = localStorage.getItem('parentToken');
@@ -37,9 +43,12 @@ export function PortalPage({ onNavigate }: PortalPageProps) {
     if (!parentToken) return;
 
     try {
-      const resp = await apiCall('/children', 'POST', { name: child.name }, parentToken);
+      const resp = await apiCall('/children', 'POST', child, parentToken);
       setChildren(prev => [...prev, resp]);
       setShowForm(false);
+      if (resp.access_code) {
+        setGeneratedCode(resp.access_code);
+      }
     } catch (err) {
       console.error('Failed to save child', err);
       alert('Failed to save child');
@@ -171,9 +180,39 @@ export function PortalPage({ onNavigate }: PortalPageProps) {
           onSave={handleChildSaved}
         />
       )}
+
+      {/* Success Modal */}
+      {generatedCode && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden text-center">
+            <div className="bg-green-500 py-8 px-6 flex flex-col items-center">
+              <CheckCircle className="w-16 h-16 text-white mb-4" />
+              <h2 className="text-2xl font-bold text-white">Setup Successful!</h2>
+              <p className="text-green-100 mt-2 text-sm">Your child has been added to CuraGuard.</p>
+            </div>
+            <div className="p-8">
+              <p className="text-gray-600 mb-6">
+                Please install the CuraGuard app on your child's phone and enter the following activation code:
+              </p>
+              <div className="bg-gray-100 border border-gray-200 rounded-xl py-4 flex items-center justify-center mb-8">
+                <span className="text-3xl font-mono font-extrabold tracking-wider text-gray-800">
+                  {generatedCode}
+                </span>
+              </div>
+              <button
+                onClick={() => setGeneratedCode(null)}
+                className="w-full bg-[#2563eb] text-white py-3.5 rounded-xl font-bold hover:bg-[#1d4ed8] transition-colors"
+              >
+                I have written this down
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 // Extended AddChildForm that returns data on save
 function AddChildFormWithCallback({
   onClose,
@@ -183,7 +222,7 @@ function AddChildFormWithCallback({
   onSave: (child: ChildInfo) => void;
 }) {
   const [formData, setFormData] = useState<ChildInfo>({
-    name: '',
+    name: '', age: '', email: '', mobile_number: '', student_id: '', grade: ''
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -198,30 +237,119 @@ function AddChildFormWithCallback({
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+        {/* Header */}
         <div className="bg-[#2563eb] px-8 py-6 flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-white">Add Child</h2>
             <p className="text-blue-100 text-sm mt-1">Enter your child's information below</p>
           </div>
-          <button onClick={onClose} className="text-white/70 hover:text-white text-2xl font-bold">✕</button>
+          <button
+            onClick={onClose}
+            className="text-white/70 hover:text-white text-2xl font-bold leading-none"
+            aria-label="Close"
+          >
+            ✕
+          </button>
         </div>
+
+        {/* Form */}
         <div className="px-8 py-6 max-h-[70vh] overflow-y-auto">
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="grid grid-cols-1 gap-4">
+            {/* Row 1: Name + Age */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name <span className="text-red-500">*</span></label>
-                <input type="text" name="name" value={formData.name} onChange={handleChange} required
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Full Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text" name="name"
+                  value={formData.name} onChange={handleChange} required
                   className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]"
-                  placeholder="Child's full name" />
+                  placeholder="Child's full name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Age <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number" name="age"
+                  value={formData.age} onChange={handleChange} required min="1" max="18"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]"
+                  placeholder="Age (1–18)"
+                />
               </div>
             </div>
-            <div className="flex gap-3 pt-2">
-              <button type="button" onClick={onClose}
-                className="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+
+            {/* Row 2: Mobile + Email */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Mobile Number <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="tel" name="mobile_number"
+                  value={formData.mobile_number} onChange={handleChange} required
+                  pattern="\d{10}" maxLength={10}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]"
+                  placeholder="10-digit number"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email
+                </label>
+                <input
+                  type="email" name="email"
+                  value={formData.email} onChange={handleChange}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]"
+                  placeholder="child@email.com"
+                />
+              </div>
+            </div>
+
+            {/* Row 3: Child ID + Grade */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Student ID <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text" name="student_id"
+                  value={formData.student_id} onChange={handleChange} required
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]"
+                  placeholder="Student ID"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Grade <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="grade"
+                  value={formData.grade} onChange={handleChange} required
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb] bg-white"
+                >
+                  <option value="">Select grade</option>
+                  {['Kindergarten', ...Array.from({ length: 12 }, (_, i) => `Grade ${i + 1}`)].map(g => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-4 border-t border-gray-100 mt-2">
+              <button
+                type="button" onClick={onClose}
+                className="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+              >
                 Cancel
               </button>
-              <button type="submit"
-                className="flex-1 py-2.5 bg-[#2563eb] text-white rounded-lg text-sm font-medium hover:bg-[#1d4ed8] transition-colors">
+              <button
+                type="submit"
+                className="flex-1 py-2.5 bg-[#2563eb] text-white rounded-lg text-sm font-medium hover:bg-[#1d4ed8] transition-colors"
+              >
                 Save Child
               </button>
             </div>

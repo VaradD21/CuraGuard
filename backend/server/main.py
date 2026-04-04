@@ -342,6 +342,11 @@ class AnalyzeRequest(BaseModel):
 
 class ChildCreateRequest(BaseModel):
     name: str
+    age: int | None = None
+    email: str | None = None
+    mobile_number: str | None = None
+    student_id: str | None = None
+    grade: str | None = None
 
 class ActivateRequest(BaseModel):
     access_code: str
@@ -539,8 +544,10 @@ def create_child(req: ChildCreateRequest, parent_id: str = Depends(require_jwt))
         with conn:
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
                 cur.execute(
-                    "INSERT INTO public.children (parent_id, name, access_code) VALUES (%s, %s, %s) RETURNING id, name, access_code",
-                    (parent_id, req.name, code)
+                    "INSERT INTO public.children (parent_id, name, age, email, mobile_number, student_id, grade, access_code) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) "
+                    "RETURNING id, name, access_code",
+                    (parent_id, req.name, req.age, req.email, req.mobile_number, req.student_id, req.grade, code)
                 )
                 return cur.fetchone()
     except Exception as exc:

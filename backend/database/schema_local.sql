@@ -12,6 +12,22 @@ create table if not exists public.parents (
   created_at   timestamptz default now()
 );
 
+-- Children
+create table if not exists public.children (
+  id uuid primary key default gen_random_uuid(),
+  parent_id uuid not null references public.parents (id) on delete cascade,
+  name text not null,
+  age integer,
+  email text,
+  mobile_number text,
+  student_id text,
+  grade text,
+  access_code text unique not null,
+  is_activated boolean default false,
+  activated_at timestamptz,
+  created_at timestamptz default now()
+);
+
 -- Events (one row per screen capture analysed)
 create table if not exists public.events (
   id                 uuid primary key default gen_random_uuid(),
