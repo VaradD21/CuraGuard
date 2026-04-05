@@ -557,7 +557,31 @@ def create_child(req: ChildCreateRequest, parent_id: str = Depends(require_jwt))
 
 @app.get("/children")
 def get_children(parent_id: str = Depends(require_jwt)):
-    return {"children": _pg_fetch("SELECT id, name, access_code, is_activated, activated_at FROM public.children WHERE parent_id = %s", [parent_id])}
+    children = _pg_fetch(
+        "SELECT id, name, age, email, mobile_number, student_id, grade, access_code, is_activated, activated_at FROM public.children WHERE parent_id = %s ORDER BY created_at DESC",
+        [parent_id]
+    )
+    return {"children": children}
+
+@app.get("/dashboard")
+def get_dashboard(parent_id: str = Depends(require_jwt)):
+    """Returns events, alerts, and children summary for the parent portal."""
+    events = _pg_fetch(
+        "SELECT id, child_id, device_id, window_title, process_name, risk_label, threat_category, duration_seconds, captured_at FROM public.events WHERE parent_id = %s ORDER BY captured_at DESC LIMIT 50",
+        [parent_id]
+    )
+    alerts = _pg_fetch(
+        "SELECT id, child_id, reason, created_at FROM public.alerts WHERE parent_id = %s ORDER BY created_at DESC LIMIT 20",
+        [parent_id]
+    )
+    # Screen time per app (last 7 days)
+    screen_time = _pg_fetch(
+        "SELECT process_name, SUM(duration_seconds) as total_seconds FROM public.events WHERE parent_id = %s AND captured_at > now() - interval '7 days' GROUP BY process_name ORDER BY total_seconds DESC LIMIT 10",
+        [parent_id]
+    )
+    return {"events": events, "alerts": alerts, "screen_time": screen_time}
+
+
 
 @app.post("/activate")
 def activate_child(req: ActivateRequest):
