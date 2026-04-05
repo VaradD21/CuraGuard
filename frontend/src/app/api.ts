@@ -1,4 +1,4 @@
-export const BASE_URL = 'https://curaguard-backend.onrender.com';
+export const BASE_URL = '/api';
 
 export async function apiCall(endpoint: string, method: string = 'GET', body?: any, token?: string) {
   const headers: HeadersInit = {

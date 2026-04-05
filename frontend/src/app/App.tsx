@@ -29,23 +29,33 @@ export default function App() {
   };
 
   const handleRegister = async (email: string, password: string, fullName: string): Promise<boolean> => {
-    const resp = await apiCall('/register', 'POST', { email, password, full_name: fullName });
-    localStorage.setItem('parentToken', resp.access_token);
-    localStorage.setItem('parentId', resp.parent_id);
-    localStorage.setItem('parentEmail', email);
-    setParentEmail(email);
-    setIsAuthenticated(true);
-    return true;
+    try {
+      const resp = await apiCall('/register', 'POST', { email, password, full_name: fullName });
+      localStorage.setItem('parentToken', resp.access_token);
+      localStorage.setItem('parentId', resp.parent_id);
+      localStorage.setItem('parentEmail', email);
+      setParentEmail(email);
+      setIsAuthenticated(true);
+      setCurrentPage('portal');
+      return true;
+    } catch (err: any) {
+      throw new Error(err.message || 'Registration failed. Please try again.');
+    }
   };
 
   const handleLogin = async (email: string, password: string): Promise<boolean> => {
-    const resp = await apiCall('/login', 'POST', { email, password });
-    localStorage.setItem('parentToken', resp.access_token);
-    localStorage.setItem('parentId', resp.parent_id);
-    localStorage.setItem('parentEmail', email);
-    setParentEmail(email);
-    setIsAuthenticated(true);
-    return true;
+    try {
+      const resp = await apiCall('/login', 'POST', { email, password });
+      localStorage.setItem('parentToken', resp.access_token);
+      localStorage.setItem('parentId', resp.parent_id);
+      localStorage.setItem('parentEmail', email);
+      setParentEmail(email);
+      setIsAuthenticated(true);
+      setCurrentPage('portal');
+      return true;
+    } catch (err: any) {
+      throw new Error(err.message || 'Login failed. Check your credentials.');
+    }
   };
 
   const handleLogout = () => {

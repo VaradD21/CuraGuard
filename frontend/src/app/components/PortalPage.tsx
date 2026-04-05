@@ -5,6 +5,7 @@ import {
   BarChart3, Bell, Eye, LogOut, RefreshCw, Copy, Check
 } from 'lucide-react';
 import { apiCall } from '../api';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface ChildInfo {
   id?: string;
@@ -34,6 +35,11 @@ interface AlertInfo {
   created_at: string;
 }
 
+interface AppUsageInfo {
+  process_name: string;
+  total_seconds: number;
+}
+
 interface PortalPageProps {
   onNavigate: (page: string) => void;
   onLogout: () => void;
@@ -45,9 +51,11 @@ export function PortalPage({ onNavigate, onLogout }: PortalPageProps) {
   const [children, setChildren] = useState<ChildInfo[]>([]);
   const [events, setEvents] = useState<EventInfo[]>([]);
   const [alerts, setAlerts] = useState<AlertInfo[]>([]);
+  const [screenTime, setScreenTime] = useState<AppUsageInfo[]>([]);
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
   const [loadingChildren, setLoadingChildren] = useState(true);
   const [loadingEvents, setLoadingEvents] = useState(true);
+  const [loadingScreenTime, setLoadingScreenTime] = useState(true);
   const [selectedChild, setSelectedChild] = useState<string | null>(null);
   const [copiedCode, setCopiedCode] = useState(false);
 
@@ -78,10 +86,25 @@ export function PortalPage({ onNavigate, onLogout }: PortalPageProps) {
     }
   };
 
+  const fetchScreenTime = async () => {
+    try {
+      setLoadingScreenTime(true);
+      const data = await apiCall('/analytics/screen_time', 'GET', undefined, token);
+      if (data?.apps) {
+        setScreenTime(data.apps.slice(0, 10)); // Top 10 most used apps
+      }
+    } catch (err) {
+      console.error('Failed to fetch screen time:', err);
+    } finally {
+      setLoadingScreenTime(false);
+    }
+  };
+
   useEffect(() => {
     if (token) {
       fetchChildren();
       fetchEvents();
+      fetchScreenTime();
     }
   }, []);
 
@@ -205,6 +228,40 @@ export function PortalPage({ onNavigate, onLogout }: PortalPageProps) {
                     <div className="text-gray-600 text-[10px] mt-0.5">{sub}</div>
                   </div>
                 ))}
+              </div>
+
+              {/* Screen Time Analytics */}
+              <div className="bg-[#0d1526] border border-[#1e2d4a] rounded-2xl overflow-hidden">
+                <div className="px-6 py-4 border-b border-[#1e2d4a] flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4 text-[#8b5cf6]" />
+                    <h2 className="text-white font-semibold">Screen Time Analytics</h2>
+                  </div>
+                  <span className="text-gray-600 text-xs">Top Apps</span>
+                </div>
+                <div className="p-6 h-[300px] w-full">
+                  {loadingScreenTime ? (
+                    <div className="flex items-center justify-center h-full">
+                      <Loader2 className="w-6 h-6 text-[#8b5cf6] animate-spin" />
+                    </div>
+                  ) : screenTime.length === 0 ? (
+                    <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+                      No screen time data available.
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={screenTime.map(st => ({ name: st.process_name, minutes: Math.round(st.total_seconds / 60) }))} margin={{ left: -20, right: 10, top: 10, bottom: 0 }}>
+                        <XAxis dataKey="name" stroke="#4b5563" fontSize={12} tickLine={false} axisLine={false} />
+                        <YAxis stroke="#4b5563" fontSize={12} tickLine={false} axisLine={false} />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#f1f5f9' }}
+                          cursor={{ fill: '#1e2d4a', opacity: 0.4 }}
+                        />
+                        <Bar dataKey="minutes" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
               </div>
 
               {/* Recent Activity */}
