@@ -6,6 +6,12 @@ __pycache__/
 .vs/
 .vscode/
 
-# Ignore the nested mobile app repository
-Mobile/
-Guardian-android-app/
+# Android build artifacts (source code tracked, builds ignored)
+Mobile/**/.gradle/
+Mobile/**/.idea/
+Mobile/**/build/
+Mobile/**/*.apk
+Mobile/**/*.aab
+Mobile/**/*.keystore
+Mobile/**/local.properties
+Mobile/**/captures/

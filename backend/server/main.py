@@ -673,11 +673,12 @@ def decrypt_verdict(req: DecryptRequest) -> dict:
 # â”€â”€ Analytics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @app.get("/analytics")
 def analytics(
-    period: str = "daily",   # daily | weekly | monthly
+    period: str = "daily",
     device_id: str | None = None,
+    child_id: str | None = None,
     parent_id: str = Depends(require_jwt),
 ):
-    """Aggregated risk/threat statistics for the dashboard analytics tab."""
+    """Aggregated risk/threat statistics. Filterable by child_id or device_id."""
     if period == "weekly":
         interval = "7 days"
     elif period == "monthly":
@@ -698,14 +699,13 @@ def analytics(
           AND captured_at >= NOW() - INTERVAL %s
     """
     params = [parent_id, interval]
-    if device_id:
+    if child_id:
+        query += " AND child_id = %s"
+        params.append(child_id)
+    elif device_id:
         query += " AND device_id = %s"
         params.append(device_id)
     query += " GROUP BY day, threat_category, process_name ORDER BY day DESC"
-
-    rows = _pg_fetch(query, params)
-    return {"period": period, "data": [dict(r) for r in rows]}
-
 
 @app.get("/analytics/screen_time")
 def screen_time_analytics(device_id: str | None = None, child_id: str | None = None, parent_id: str = Depends(require_jwt)):
