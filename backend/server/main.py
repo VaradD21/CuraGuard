@@ -1,5 +1,5 @@
-"""
-Project Guardian — FastAPI Brain V3
+﻿"""
+Project Guardian â€” FastAPI Brain V3
   - AES-256 encrypted verdict storage (no raw text/images ever stored)
   - Email alerts (Gmail SMTP)
   - Heartbeat endpoint + 3-minute watchdog
@@ -58,7 +58,7 @@ JWT_SECRET = os.getenv("JWT_SECRET", "super-secret-parent-jwt-token")
 CHILD_JWT_SECRET = os.getenv("CHILD_JWT_SECRET", "super-secret-child-jwt-token")
 MODEL_URL  = os.getenv("MODEL_URL", "http://127.0.0.1:8001")
 
-# ── AES-256 Fernet Encryption ──────────────────────────────────────────────────
+# â”€â”€ AES-256 Fernet Encryption â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Generate a key once: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 # Then set GUARDIAN_FIELD_KEY in brain/.env
 _FIELD_KEY_RAW = os.getenv("GUARDIAN_FIELD_KEY", "")
@@ -67,30 +67,30 @@ if _FIELD_KEY_RAW:
 else:
     _auto_key = Fernet.generate_key()
     _fernet = Fernet(_auto_key)
-    log.warning("GUARDIAN_FIELD_KEY not set — using ephemeral key. Set in .env to persist decryption!")
+    log.warning("GUARDIAN_FIELD_KEY not set â€” using ephemeral key. Set in .env to persist decryption!")
 
 
 def _encrypt(data: Any) -> str:
-    """Encrypt any JSON-serialisable object → hex-encoded Fernet ciphertext."""
+    """Encrypt any JSON-serialisable object â†’ hex-encoded Fernet ciphertext."""
     return _fernet.encrypt(json.dumps(data, default=str).encode()).hex()
 
 
 def _decrypt(hex_ciphertext: str) -> Any:
-    """Decrypt hex-encoded Fernet ciphertext → Python object."""
+    """Decrypt hex-encoded Fernet ciphertext â†’ Python object."""
     return json.loads(_fernet.decrypt(bytes.fromhex(hex_ciphertext)).decode())
 
 
 def _text_hash(text: str) -> str:
-    """SHA-256 of text — for deduplication only, never reveals content."""
+    """SHA-256 of text â€” for deduplication only, never reveals content."""
     return hashlib.sha256(text.encode()).hexdigest()
 
 
-# ── Heartbeat Tracking ─────────────────────────────────────────────────────────
+# â”€â”€ Heartbeat Tracking â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 _heartbeat_registry: dict[str, datetime] = {}
 _HEARTBEAT_TIMEOUT = 180  # seconds (3 minutes)
 
 
-# ── Email Dispatcher ───────────────────────────────────────────────────────────
+# â”€â”€ Email Dispatcher â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 ALERT_EMAIL_FROM = os.getenv("ALERT_EMAIL_FROM", "")
 ALERT_EMAIL_TO   = os.getenv("ALERT_EMAIL_TO", "")
 GMAIL_APP_PASS   = os.getenv("GMAIL_APP_PASSWORD", "")
@@ -99,11 +99,11 @@ GMAIL_APP_PASS   = os.getenv("GMAIL_APP_PASSWORD", "")
 def send_email_alert(subject: str, body_html: str) -> None:
     """Send HTML email via Gmail SMTP. Silently fails if not configured."""
     if not all([ALERT_EMAIL_FROM, ALERT_EMAIL_TO, GMAIL_APP_PASS]):
-        log.debug("Email not configured — skipping.")
+        log.debug("Email not configured â€” skipping.")
         return
     try:
         msg = MIMEMultipart("alternative")
-        msg["Subject"] = f"🚨 Guardian Alert: {subject}"
+        msg["Subject"] = f"ðŸš¨ Guardian Alert: {subject}"
         msg["From"]    = ALERT_EMAIL_FROM
         msg["To"]      = ALERT_EMAIL_TO
         msg.attach(MIMEText(body_html, "html"))
@@ -123,7 +123,7 @@ def _threat_email_html(device_id: str, threat_cat: str, risk_level: str,
     <html><body style="font-family:sans-serif;background:#0f172a;color:#f1f5f9;padding:24px">
       <div style="max-width:600px;margin:auto;background:#1e293b;border-radius:12px;
                   padding:24px;border:1px solid #334155">
-        <h2 style="color:{color};margin:0 0 16px">🚨 Guardian Safety Alert</h2>
+        <h2 style="color:{color};margin:0 0 16px">ðŸš¨ Guardian Safety Alert</h2>
         <table style="width:100%;border-collapse:collapse">
           <tr><td style="padding:8px;color:#94a3b8">Device</td>
               <td style="padding:8px">{device_id}</td></tr>
@@ -152,7 +152,7 @@ def _termination_email_html(device_id: str, last_seen: datetime) -> str:
     <html><body style="font-family:sans-serif;background:#0f172a;color:#f1f5f9;padding:24px">
       <div style="max-width:600px;margin:auto;background:#450a0a;border-radius:12px;
                   padding:24px;border:2px solid #dc2626">
-        <h2 style="color:#dc2626">🔴 CRITICAL: Monitoring Disabled</h2>
+        <h2 style="color:#dc2626">ðŸ”´ CRITICAL: Monitoring Disabled</h2>
         <p>The safety monitoring app on device <strong>{device_id}</strong> has not responded
            since <strong>{last_seen.strftime('%Y-%m-%d %H:%M:%S UTC')}</strong>.</p>
         <p>Your child may have <strong>terminated the monitoring process</strong>.</p>
@@ -161,14 +161,14 @@ def _termination_email_html(device_id: str, last_seen: datetime) -> str:
     </body></html>"""
 
 
-# ── Background watchdog: fire alert for missed heartbeats ──────────────────────
+# â”€â”€ Background watchdog: fire alert for missed heartbeats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async def _heartbeat_watchdog():
     while True:
         await asyncio.sleep(60)
         now = datetime.now(timezone.utc)
         for device_id, last_seen in list(_heartbeat_registry.items()):
             if (now - last_seen).total_seconds() > _HEARTBEAT_TIMEOUT:
-                log.warning("HEARTBEAT MISSED: %s — last seen %s", device_id, last_seen)
+                log.warning("HEARTBEAT MISSED: %s â€” last seen %s", device_id, last_seen)
                 await asyncio.to_thread(
                     send_email_alert,
                     f"CRITICAL: Monitoring stopped on {device_id}",
@@ -206,7 +206,7 @@ def _run_daily_reports():
                     <html><body style="font-family:sans-serif;background:#0f172a;color:#f1f5f9;padding:24px">
                       <div style="max-width:600px;margin:auto;background:#1e293b;border-radius:12px;
                                   padding:24px;border:1px solid #334155">
-                        <h2 style="color:#38bdf8;margin:0 0 16px">📅 Daily Guardian Report</h2>
+                        <h2 style="color:#38bdf8;margin:0 0 16px">ðŸ“… Daily Guardian Report</h2>
                         <p>Here is your daily summary for the past 24 hours.</p>
                         <ul>
                             <li>Total Activity Captured: {stats['total_events']}</li>
@@ -248,7 +248,7 @@ async def startup_event():
     asyncio.create_task(_daily_report_watchdog())
 
 
-# ── Database Pool ──────────────────────────────────────────────────────────────
+# â”€â”€ Database Pool â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 _pg_pool: psycopg2.pool.ThreadedConnectionPool | None = None
 
 
@@ -271,9 +271,9 @@ def _get_pg_pool() -> psycopg2.pool.ThreadedConnectionPool:
                 minconn=1, maxconn=20,
                 host=host, dbname=name, user=user, password=pwd, port=port
             )
-            log.info("✅ Database connection pool initialized successfully.")
+            log.info("âœ… Database connection pool initialized successfully.")
         except Exception as exc:
-            log.error("❌ Database connection failed: %s", exc)
+            log.error("âŒ Database connection failed: %s", exc)
             raise
     return _pg_pool
 
@@ -315,7 +315,7 @@ def db_insert_alert(parent_id: str, child_id: str | None, device_id: str, reason
     """, [parent_id, child_id, reason, device_id])
 
 
-# ── JWT Auth ───────────────────────────────────────────────────────────────────
+# â”€â”€ JWT Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def _get_token_sub(token: str, secret: str) -> str:
     payload = jwt.decode(token, secret, algorithms=["HS256"], options={"verify_exp": False})
     sub = payload.get("sub")
@@ -346,7 +346,7 @@ def require_child_jwt(creds: HTTPAuthorizationCredentials | None = Depends(secur
         raise HTTPException(status_code=401, detail=f"Invalid Child JWT: {exc}")
 
 
-# ── Pydantic Models ────────────────────────────────────────────────────────────
+# â”€â”€ Pydantic Models â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class AnalyzeRequest(BaseModel):
     device_id: str
     captured_at: datetime
@@ -425,7 +425,7 @@ class DecryptRequest(BaseModel):
     verdict_enc_hex: str
 
 
-# ── Helper ─────────────────────────────────────────────────────────────────────
+# â”€â”€ Helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def _heuristic_risk(text: str) -> tuple[str, float]:
     keywords = ("meet", "secret", "dont tell", "don't tell", "alone", "pics", "address",
                  "come over", "our secret", "delete this")
@@ -439,16 +439,16 @@ def calculate_relationship_score(text: str) -> float:
     return float((vs["compound"] * max(vs["pos"], vs["neg"])) + (1.2 * 0.8))
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 #  ENDPOINTS
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 @app.get("/healthz")
 def healthz() -> dict:
     return {"status": "ok", "version": "0.3.0"}
 
 
-# ── Auth ───────────────────────────────────────────────────────────────────────
+# â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @app.post("/register", response_model=AuthResponse)
 def register(req: RegisterRequest):
     pool = _get_pg_pool()
@@ -521,7 +521,7 @@ def get_devices(parent_id: str = Depends(require_jwt)):
     try:
         with conn:
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-                cur.execute("SELECT device_id, device_name, child_age FROM public.devices WHERE parent_id = %s", (parent_id,))
+                cur.execute("SELECT device_id, device_name, child_age, child_id FROM public.devices WHERE parent_id = %s", (parent_id,))
                 return {"devices": cur.fetchall()}
     except psycopg2.Error as exc:
         raise HTTPException(status_code=500, detail=f"Database error: {exc}")
@@ -548,7 +548,7 @@ def update_device_age(device_id: str, req: AgeUpdateRequest, parent_id: str = De
         pool.putconn(conn)
 
 
-# ── Children & Activation ──────────────────────────────────────────────────────
+# â”€â”€ Children & Activation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def _generate_access_code() -> str:
     import random
     import string
@@ -584,24 +584,24 @@ def get_children(parent_id: str = Depends(require_jwt)):
     return {"children": children}
 
 @app.get("/dashboard")
-def get_dashboard(parent_id: str = Depends(require_jwt)):
-    """Returns events, alerts, and children summary for the parent portal."""
+def get_dashboard(child_id: str | None = None, parent_id: str = Depends(require_jwt)):
+    """Returns events, alerts, and children summary for the parent portal. Filter by child_id if provided."""
+    child_filter = " AND child_id = %s" if child_id else ""
+    base_params = [parent_id, child_id] if child_id else [parent_id]
+
     events = _pg_fetch(
-        "SELECT id, child_id, device_id, window_title, process_name, risk_label, threat_category, duration_seconds, captured_at FROM public.events WHERE parent_id = %s ORDER BY captured_at DESC LIMIT 50",
-        [parent_id]
+        f"SELECT id, child_id, device_id, window_title, process_name, risk_label, threat_category, duration_seconds, captured_at FROM public.events WHERE parent_id = %s{child_filter} ORDER BY captured_at DESC LIMIT 50",
+        base_params
     )
     alerts = _pg_fetch(
-        "SELECT id, child_id, reason, created_at FROM public.alerts WHERE parent_id = %s ORDER BY created_at DESC LIMIT 20",
-        [parent_id]
+        f"SELECT id, child_id, reason, created_at FROM public.alerts WHERE parent_id = %s{child_filter} ORDER BY created_at DESC LIMIT 20",
+        base_params
     )
-    # Screen time per app (last 7 days)
     screen_time = _pg_fetch(
-        "SELECT process_name, SUM(duration_seconds) as total_seconds FROM public.events WHERE parent_id = %s AND captured_at > now() - interval '7 days' GROUP BY process_name ORDER BY total_seconds DESC LIMIT 10",
-        [parent_id]
+        f"SELECT process_name, SUM(duration_seconds) as total_seconds FROM public.events WHERE parent_id = %s{child_filter} AND captured_at > now() - interval '7 days' GROUP BY process_name ORDER BY total_seconds DESC LIMIT 10",
+        base_params
     )
     return {"events": events, "alerts": alerts, "screen_time": screen_time}
-
-
 
 @app.post("/activate")
 def activate_child(req: ActivateRequest):
@@ -640,7 +640,7 @@ def activate_child(req: ActivateRequest):
     finally:
         pool.putconn(conn)
 
-# ── Heartbeat ──────────────────────────────────────────────────────────────────
+# â”€â”€ Heartbeat â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @app.post("/heartbeat")
 def heartbeat(req: HeartbeatRequest) -> dict:
     now = datetime.now(timezone.utc)
@@ -660,7 +660,7 @@ def heartbeat_status() -> dict:
     return {"dead_devices": dead, "checked_at": now.isoformat()}
 
 
-# ── Decrypt ────────────────────────────────────────────────────────────────────
+# â”€â”€ Decrypt â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @app.post("/decrypt", dependencies=[Depends(require_jwt)])
 def decrypt_verdict(req: DecryptRequest) -> dict:
     """Only callable by authenticated parents. Brain-side decryption only."""
@@ -670,7 +670,7 @@ def decrypt_verdict(req: DecryptRequest) -> dict:
         raise HTTPException(status_code=400, detail=f"Decryption failed: {exc}")
 
 
-# ── Analytics ──────────────────────────────────────────────────────────────────
+# â”€â”€ Analytics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @app.get("/analytics")
 def analytics(
     period: str = "daily",   # daily | weekly | monthly
@@ -708,26 +708,26 @@ def analytics(
 
 
 @app.get("/analytics/screen_time")
-def screen_time_analytics(device_id: str | None = None, parent_id: str = Depends(require_jwt)):
-    """Per-app total focus duration aggregated from screen_time data."""
+def screen_time_analytics(device_id: str | None = None, child_id: str | None = None, parent_id: str = Depends(require_jwt)):
+    """Per-app total focus duration. Filterable by child_id or device_id."""
     query = """
-        SELECT process_name, 
-               COUNT(*) AS captures, 
-               AVG(risk_score) AS avg_risk, 
+        SELECT process_name,
+               COUNT(*) AS captures,
+               AVG(risk_score) AS avg_risk,
                SUM(duration_seconds) AS total_seconds
         FROM public.events
         WHERE parent_id = %s
     """
     params = [parent_id]
-    if device_id:
+    if child_id:
+        query += " AND child_id = %s"
+        params.append(child_id)
+    elif device_id:
         query += " AND device_id = %s"
         params.append(device_id)
-        
     query += " GROUP BY process_name ORDER BY total_seconds DESC"
     rows = _pg_fetch(query, params)
     return {"apps": [dict(r) for r in rows]}
-
-
 @app.get("/keystrokes/{device_id}")
 def behavioral_summary(device_id: str, parent_id: str = Depends(require_jwt)):
     """Phase 15: Behavioral pattern summary based on metadata."""
@@ -752,7 +752,7 @@ def behavioral_summary(device_id: str, parent_id: str = Depends(require_jwt)):
 
 @app.get("/events/{device_id}")
 def recent_events(device_id: str, limit: int = 20, parent_id: str = Depends(require_jwt)):
-    """Returns the most recent flagged events for a device — used to populate the threat hint feed."""
+    """Returns the most recent flagged events for a device â€” used to populate the threat hint feed."""
     rows = _pg_fetch("""
         SELECT captured_at, threat_category, action_recommended, process_name, risk_label, alert
         FROM public.events
@@ -763,7 +763,7 @@ def recent_events(device_id: str, limit: int = 20, parent_id: str = Depends(requ
     return {"device_id": device_id, "events": [dict(r) for r in rows]}
 
 
-# ── Main Analyze ───────────────────────────────────────────────────────────────
+# â”€â”€ Main Analyze â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @app.post("/analyze", response_model=AnalyzeResponse)
 async def analyze(body: AnalyzeRequest, auth: dict = Depends(require_child_jwt)) -> AnalyzeResponse:
     parent_id = auth["parent_id"]
@@ -791,7 +791,7 @@ async def analyze(body: AnalyzeRequest, auth: dict = Depends(require_child_jwt))
                     if row[0] is not None:
                         configured_age = row[0]
                 else:
-                    # First time we see this device — register it automatically
+                    # First time we see this device â€” register it automatically
                     # so it shows up in GET /devices on the parent app
                     try:
                         cur.execute(
@@ -810,7 +810,7 @@ async def analyze(body: AnalyzeRequest, auth: dict = Depends(require_child_jwt))
         "conversation_id": body.region_hash or body.device_id,
         "friendship_duration_days": 0,
         "sender_age": configured_age,
-        "receiver_age": 25,   # conservative default — unknown stranger
+        "receiver_age": 25,   # conservative default â€” unknown stranger
     }
 
     model_result: dict = {}
@@ -826,7 +826,7 @@ async def analyze(body: AnalyzeRequest, auth: dict = Depends(require_child_jwt))
             else:
                 log.warning("Model /analyze returned %s", r.status_code)
         except Exception as exc:
-            log.warning("Model unreachable (%s) — using heuristic fallback", exc)
+            log.warning("Model unreachable (%s) â€” using heuristic fallback", exc)
             _, fallback_score = _heuristic_risk(body.text)
             model_result = {
                 "risk_level": "mild" if fallback_score > 0.3 else "safe",
@@ -834,7 +834,7 @@ async def analyze(body: AnalyzeRequest, auth: dict = Depends(require_child_jwt))
                 "reason": "Fallback heuristic (model unreachable)",
                 "threat_category": "unknown",
                 "detected_phase": "Normal",
-                "ai_judgment": "Model offline — heuristic used.",
+                "ai_judgment": "Model offline â€” heuristic used.",
                 "action_recommended": "monitor",
                 "behavioral_flags": [],
                 "flagged_messages": [],
@@ -850,7 +850,7 @@ async def analyze(body: AnalyzeRequest, auth: dict = Depends(require_child_jwt))
             except Exception as exc:
                 log.warning("Model /analyze_media failed: %s", exc)
 
-    # 3. Map model result → Guardian response
+    # 3. Map model result â†’ Guardian response
     risk_level     = model_result.get("risk_level", "safe").lower()
     confidence     = float(model_result.get("confidence", 0.0))
     ai_judgment    = model_result.get("ai_judgment") or model_result.get("reason", "")
@@ -887,7 +887,7 @@ async def analyze(body: AnalyzeRequest, auth: dict = Depends(require_child_jwt))
         flagged_messages=flagged_msgs,
     )
 
-    # 4. Persist — PRIVACY: encrypt verdict, NEVER store raw text or images
+    # 4. Persist â€” PRIVACY: encrypt verdict, NEVER store raw text or images
     verdict_payload = {
         "threat_category":    threat_cat,
         "detected_phase":     detected_phase,
@@ -918,7 +918,7 @@ async def analyze(body: AnalyzeRequest, auth: dict = Depends(require_child_jwt))
         "detected_phase":     detected_phase,
         "action_recommended": action,
         "behavioral_flags":   json.dumps(beh_flags),
-        # AES-256 encrypted full verdict — decrypt only via /decrypt endpoint
+        # AES-256 encrypted full verdict â€” decrypt only via /decrypt endpoint
         "verdict_enc":        _encrypt(verdict_payload),
         "duration_seconds":   body.duration_seconds,
     }
@@ -929,7 +929,7 @@ async def analyze(body: AnalyzeRequest, auth: dict = Depends(require_child_jwt))
             # Fire email asynchronously (non-blocking)
             asyncio.create_task(asyncio.to_thread(
                 send_email_alert,
-                f"{threat_cat} — {risk_level}",
+                f"{threat_cat} â€” {risk_level}",
                 _threat_email_html(body.device_id, threat_cat, risk_level,
                                    ai_judgment, action, body.process_name)
             ))
