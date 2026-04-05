@@ -39,7 +39,18 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("guardian.brain")
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(title="Project Guardian Brain", version="0.3.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 security = HTTPBearer(auto_error=False)
 vader_analyzer = SentimentIntensityAnalyzer()
 
@@ -166,6 +177,51 @@ async def _heartbeat_watchdog():
                 del _heartbeat_registry[device_id]
 
 
+def _run_daily_reports():
+    pool = _get_pg_pool()
+    conn = pool.getconn()
+    try:
+        with conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                # Calculate stats for all parents in one query
+                cur.execute("""
+                    SELECT parent_id, 
+                           COUNT(*) as total_events, 
+                           SUM(CASE WHEN alert THEN 1 ELSE 0 END) as total_alerts 
+                    FROM public.events 
+                    WHERE captured_at >= NOW() - INTERVAL '1 day'
+                    GROUP BY parent_id
+                """)
+                stats_by_parent = {str(row["parent_id"]): row for row in cur.fetchall()}
+                
+                # Fetch all parents
+                cur.execute("SELECT id, email FROM public.parents")
+                parents = cur.fetchall()
+                
+                for p in parents:
+                    pid = str(p["id"])
+                    stats = stats_by_parent.get(pid, {"total_events": 0, "total_alerts": 0})
+                    
+                    html = f"""
+                    <html><body style="font-family:sans-serif;background:#0f172a;color:#f1f5f9;padding:24px">
+                      <div style="max-width:600px;margin:auto;background:#1e293b;border-radius:12px;
+                                  padding:24px;border:1px solid #334155">
+                        <h2 style="color:#38bdf8;margin:0 0 16px">📅 Daily Guardian Report</h2>
+                        <p>Here is your daily summary for the past 24 hours.</p>
+                        <ul>
+                            <li>Total Activity Captured: {stats['total_events']}</li>
+                            <li>Interventions / Alerts Triggered: <strong>{stats['total_alerts']}</strong></li>
+                        </ul>
+                        <p>Log into your Guardian Dashboard to see detailed analytics.</p>
+                      </div>
+                    </body></html>
+                    """
+                    # Blocking send_email_alert since this is running in asyncio.to_thread
+                    send_email_alert("Daily Guardian Activity Report", html)
+    finally:
+        pool.putconn(conn)
+
+
 async def _daily_report_watchdog():
     """Phase 15: Daily email report scheduler."""
     while True:
@@ -179,45 +235,9 @@ async def _daily_report_watchdog():
         log.info("Next daily report scheduled in %.1f seconds", sleep_seconds)
         await asyncio.sleep(sleep_seconds)
         
-        # Fire off emails to all parents
+        # Run the synchronous report generation off the main async event loop
         try:
-            pool = _get_pg_pool()
-            conn = pool.getconn()
-            try:
-                with conn:
-                    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-                        cur.execute("SELECT id, email FROM public.parents")
-                        parents = cur.fetchall()
-                        for p in parents:
-                            cur.execute("""
-                                SELECT COUNT(*) as total_events, 
-                                       SUM(CASE WHEN alert THEN 1 ELSE 0 END) as total_alerts 
-                                FROM public.events 
-                                WHERE parent_id = %s AND captured_at >= NOW() - INTERVAL '1 day'
-                            """, (p["id"],))
-                            stats = cur.fetchone()
-                            
-                            html = f"""
-                            <html><body style="font-family:sans-serif;background:#0f172a;color:#f1f5f9;padding:24px">
-                              <div style="max-width:600px;margin:auto;background:#1e293b;border-radius:12px;
-                                          padding:24px;border:1px solid #334155">
-                                <h2 style="color:#38bdf8;margin:0 0 16px">📅 Daily Guardian Report</h2>
-                                <p>Here is your daily summary for the past 24 hours.</p>
-                                <ul>
-                                    <li>Total Activity Captured: {stats['total_events']}</li>
-                                    <li>Interventions / Alerts Triggered: <strong>{stats['total_alerts']}</strong></li>
-                                </ul>
-                                <p>Log into your Guardian Dashboard to see detailed analytics.</p>
-                              </div>
-                            </body></html>
-                            """
-                            await asyncio.to_thread(
-                                send_email_alert,
-                                "Daily Guardian Activity Report",
-                                html
-                            )
-            finally:
-                pool.putconn(conn)
+            await asyncio.to_thread(_run_daily_reports)
         except Exception as e:
             log.error("Failed to generate daily reports: %s", e)
 
@@ -917,3 +937,108 @@ async def analyze(body: AnalyzeRequest, auth: dict = Depends(require_child_jwt))
         log.exception("DB insert failed: %s", exc)
 
     return resp
+
+@app.post("/seed")
+def seed_database():
+    """Temporary endpoint to seed database on deployed environment."""
+    import random
+    import uuid
+    import json
+    import string
+    
+    email = "admin@curaguard.com"
+    password = "password"
+    
+    password_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+    
+    pool = _get_pg_pool()
+    conn = pool.getconn()
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id FROM public.parents WHERE email = %s", (email,))
+                parent_row = cur.fetchone()
+                if parent_row:
+                    parent_id = parent_row[0]
+                    cur.execute("DELETE FROM public.alerts WHERE parent_id = %s", (parent_id,))
+                    cur.execute("DELETE FROM public.events WHERE parent_id = %s", (parent_id,))
+                    cur.execute("DELETE FROM public.children WHERE parent_id = %s", (parent_id,))
+                    cur.execute("DELETE FROM public.devices WHERE parent_id = %s", (parent_id,))
+                    cur.execute("DELETE FROM public.parents WHERE id = %s", (parent_id,))
+                
+                cur.execute(
+                    "INSERT INTO public.parents (email, password_hash) VALUES (%s, %s) RETURNING id",
+                    (email, password_hash)
+                )
+                parent_id = cur.fetchone()[0]
+                
+                def gen_code():
+                    return "-".join(["".join(random.choices(string.ascii_uppercase + string.digits, k=4)) for _ in range(3)])
+
+                child3_access = gen_code()
+
+                cur.execute(
+                    "INSERT INTO public.children (parent_id, name, access_code, is_activated, activated_at) VALUES (%s, %s, %s, %s, NOW()) RETURNING id",
+                    (parent_id, "Abhay", gen_code(), True)
+                )
+                abhay_id = cur.fetchone()[0]
+                
+                cur.execute(
+                    "INSERT INTO public.children (parent_id, name, access_code, is_activated, activated_at) VALUES (%s, %s, %s, %s, NOW()) RETURNING id",
+                    (parent_id, "Nitin", gen_code(), True)
+                )
+                nitin_id = cur.fetchone()[0]
+
+                cur.execute(
+                    "INSERT INTO public.children (parent_id, name, access_code, is_activated, activated_at) VALUES (%s, %s, %s, %s, %s) RETURNING id",
+                    (parent_id, "Third Child", child3_access, False, None)
+                )
+                
+                apps = ["Discord", "Chrome", "YouTube", "Roblox", "WhatsApp", "Zoom"]
+                threats = ["grooming_attempt", "toxic_behavior", "self_harm_intent", "nsfw_image", "cyberbullying"]
+                
+                for i in range(120):
+                    is_alert = (i % 7 == 0)
+                    risk_score = random.uniform(0.75, 0.98) if is_alert else random.uniform(0.01, 0.15)
+                    risk_label = "hazardous" if is_alert else "safe"
+                    threat_cat = random.choice(threats) if is_alert else "none"
+                    duration_sec = random.randint(30, 600)
+                    process = random.choice(apps)
+                    
+                    event_id = str(uuid.uuid4())
+                    cur.execute("""
+                        INSERT INTO public.events (
+                            id, parent_id, child_id, device_id, captured_at, window_title, process_name,
+                            sentiment_score, sentiment_label, risk_score, risk_label, alert,
+                            threat_category, detected_phase, action_recommended, behavioral_flags, verdict_enc, duration_seconds
+                        ) VALUES (%s, %s, %s, %s, NOW() - INTERVAL '%s minute', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (
+                        event_id, parent_id, nitin_id, "PC-NITIN", str(i * 80 + random.randint(0,40)), f"Watching {process}", process,
+                        0.5, risk_label, risk_score, risk_label, is_alert,
+                        threat_cat, "Escalation" if is_alert else "Normal", "block" if is_alert else "monitor",
+                        json.dumps(["suspicious_link"] if is_alert else []), 
+                        "6865785f63697068657274657874", duration_sec
+                    ))
+                    if is_alert:
+                        cur.execute("INSERT INTO public.alerts (parent_id, child_id, event_id, reason) VALUES (%s, %s, %s, %s)",
+                                    (parent_id, nitin_id, event_id, f"Detected {threat_cat}"))
+                                    
+                for i in range(80):
+                    duration_sec = random.randint(30, 900)
+                    process = random.choice(apps)
+                    
+                    cur.execute("""
+                        INSERT INTO public.events (
+                            id, parent_id, child_id, device_id, captured_at, window_title, process_name,
+                            sentiment_score, sentiment_label, risk_score, risk_label, alert,
+                            threat_category, detected_phase, action_recommended, behavioral_flags, verdict_enc, duration_seconds
+                        ) VALUES (%s, %s, %s, %s, NOW() - INTERVAL '%s minute', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (
+                        str(uuid.uuid4()), parent_id, abhay_id, "PC-ABHAY", str(i * 120 + random.randint(0,60)), f"Studying on {process}", process,
+                        0.8, "safe", 0.05, "safe", False,
+                        "none", "Normal", "monitor", "[]", 
+                        "6865785f63697068657274657874", duration_sec
+                    ))
+        return {"status": "success", "message": "Database seeded with Abhay and Nitin", "child3_access": child3_access}
+    finally:
+        pool.putconn(conn)
